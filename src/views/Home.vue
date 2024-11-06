@@ -6,6 +6,15 @@
       style="background-color: #996699;height: 50px;line-height: 50px;border-radius:10px;margin-bottom: 20px;">
       <span style="color: #fff;margin-left: 20px;"><i class="el-icon-data-analysis"></i>统计</span>
     </el-row>
+    <div style="width: 90%; margin: 0 auto; display: flex;flex-direction: row;justify-content: flex-end;
+      align-items: center;">
+      <el-radio-group v-model="type" size="mini" @input="changeRadio">
+        <el-radio-button label="7"><span>近7天</span></el-radio-button>
+        <el-radio-button label="30"><span>近30天</span></el-radio-button>
+      </el-radio-group>
+      <span class="refresh" contenteditable="false" @click="changeRadio"><i
+          class="el-icon-refresh"></i></span>
+    </div>
     <el-row>
       <el-col :span="24">
         <div class="line-graph" id="graph" style="height: 300px;width: 90%;"></div>
@@ -28,11 +37,11 @@
             </div>
             <el-popover v-for="taks in allTasks" :key="taks.id"
               v-if="taks.created_at.split(' ')[0]== data.day" placement="top-start" title="标题"
-              width="200" trigger="hover" content="这是一段内容,这是一段内容,这是一段内容,这是一段内容。">
+              width="200" trigger="hover">
               <div>
                 <span>{{taks.description}}</span>
               </div>
-              <span slot="reference">OO</span>
+              <span slot="reference">O</span>
             </el-popover>
           </template>
         </el-calendar>
@@ -49,7 +58,8 @@
             <span class="bar"></span>
             <label>任务描述</label>
           </div>
-          <el-checkbox class="checkbox" v-model="item.completed" size="medium">完成</el-checkbox>
+          <el-checkbox class="checkbox" @change="saveTasks(item)" v-model="item.completed"
+            size="medium">完成</el-checkbox>
         </div>
         <!-- 添加任务 -->
         <div class="addTakes" @click="addTasks"><i class="el-icon-plus"></i></div>
@@ -68,6 +78,9 @@ export default {
       allTasks: [],
       tasks: [],
       thisDate: "",
+      type: "7",
+      graphData: [],
+      myChart: null,
     };
   },
   methods: {
@@ -96,40 +109,51 @@ export default {
     },
     //失去焦点保存
     async saveTasks(item) {
-      console.log(item);
       // 一种是保存，没有之前的消息
       //id存在则更新，id不存在则是保存
       if (item.id) {
         //更新
         const res = await window.api.updateTaks(item);
-        console.log("更新结果", res);
-        return false;
+        console.log(res);
       }
       if (!item.id && item.description !== "") {
+        item.created_at = this.thisDate;
         const res = await window.api.addTasksDB(item);
-        console.log("添加结果", res);
       }
     },
     // 关闭弹窗
-    closeDialog() {
+    async closeDialog() {
       this.tasks = [];
+      let res = await window.api.getTasksDB();
+      this.allTasks = res;
+    },
+    //图表日期范围更换
+    async changeRadio() {
+      let res = await window.api.getGraphData(this.type);
+      this.myChart.setOption({
+        dataset: {
+          source: [...res],
+        },
+      });
     },
   },
   async mounted() {
     let res = await window.api.getTasksDB();
     this.allTasks = res;
     // 基于准备好的dom，初始化echarts实例
-    var myChart = echarts.init(document.getElementById("graph"));
+    this.myChart = echarts.init(document.getElementById("graph"));
     let option = {
       tooltip: {
         trigger: "axis",
+      },
+      dataset: {
+        source: [],
       },
       legend: {
         data: ["compeleted", "uncompeleted"],
       },
       xAxis: {
         type: "category",
-        data: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
       },
       yAxis: {
         type: "value",
@@ -139,21 +163,22 @@ export default {
           name: "compeleted",
           type: "line",
           stack: "Total",
-          data: [120, 132, 101, 134, 90, 230, 210],
+          color: ["#0C9CEB", "#E8772E"],
         },
         {
           name: "uncompeleted",
           type: "line",
           stack: "Total",
-          data: [220, 182, 191, 234, 290, 330, 310],
+          color: ["#E8772E", "#0C9CEB", "#7289ab", "#91ca8c", "#f49f42"],
         },
       ],
     };
     // 绘制图表
-    option && myChart.setOption(option);
-    window.addEventListener("resize", function () {
-      myChart.resize();
+    option && this.myChart.setOption(option);
+    window.addEventListener("resize", () => {
+      this.myChart.resize();
     });
+    this.changeRadio();
   },
 };
 </script>
@@ -161,6 +186,22 @@ export default {
 <style lang="less">
 .is-selected {
   color: #336699;
+}
+.refresh {
+  padding: 0 5px;
+  margin-left: 10px;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.4s ease;
+  caret-color: transparent;
+  &:hover {
+    color: #9d57ff;
+  }
+  &:active,
+  &:focus {
+    color: #999;
+    transform: rotate(360deg);
+  }
 }
 .container {
   height: 100%;

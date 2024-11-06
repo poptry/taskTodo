@@ -30,4 +30,19 @@ export default {
   color: #2f2fad !important;
   font-weight: 550;
 }
+.el-radio-button__inner:hover {
+  color: #a958eb !important;
+}
+.el-radio-button__orig-radio:checked + .el-radio-button__inner {
+  background-color: #9367c5 !important;
+  border-color: #f0c1e1 !important;
+  box-shadow: -1px 0 0 0 #b362fa !important;
+  user-select: none;
+  &:hover {
+    color: #ffffff !important;
+  }
+}
+.el-radio-button:focus:not(.is-focus):not(:active):not(.is-disabled) {
+  box-shadow: none !important;
+}
 </style>

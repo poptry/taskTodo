@@ -10,6 +10,7 @@ const {
   getTasks,
   updateTask,
   getTasksByDate,
+  getGraphData,
 } = require("../dist_electron/electron/incident"); // 导入处理函数
 const isDevelopment = process.env.NODE_ENV !== "production";
 protocol.registerSchemesAsPrivileged([
@@ -58,6 +59,7 @@ app.whenReady().then(async () => {
     ipcMain.handle("get-tasks", getTasks); //获取所有
     ipcMain.handle("get-tasksByData", getTasksByDate); //获取单个getTasksByDate
     ipcMain.handle("update-task", updateTask); // 更新updateTask
+    ipcMain.handle("get-graphData", getGraphData); // 更新updateTask
   } catch (error) {
     console.error("数据库初始化失败", error);
   }
