@@ -33,15 +33,22 @@
           <!-- 这里使用的是 2.5 slot 语法，对于新项目请使用 2.6 slot 语法-->
           <template slot="dateCell" slot-scope="{date, data}">
             <div :class="data.isSelected ? 'is-selected' : ''" @click="clickDay(data)">
-              {{ data.day.split('-').slice(2).join('-')  }} {{ data.isSelected ? '✔️' : ''}}
+              {{ data.day.split('-').slice(2).join('-')  }}
             </div>
-            <el-popover v-for="taks in allTasks" :key="taks.id"
-              v-if="taks.created_at.split(' ')[0]== data.day" placement="top-start" title="标题"
-              width="200" trigger="hover">
-              <div>
-                <span>{{taks.description}}</span>
+            <el-popover v-if="allTasks.length!=0 && uniqueDate.length!=0" placement="top-start"
+              title="任务" width="200" trigger="hover">
+              <div class="poperBox">
+                <div v-for="task in allTasks" :key="task.id"
+                  v-if="task.created_at.split(' ')[0] == data.day" class="poperBoxItem">
+                  <span :class="task.completed ? `compeleteItem` : ''">{{task.description}}</span>
+                </div>
               </div>
-              <span slot="reference">O</span>
+              <div slot="reference">
+                <span v-for="item in uniqueDate" :key="item.created_at"
+                  v-if="item.created_at.split(' ')[0]== data.day" @click="clickDay(data)">
+                  <i class="el-icon-edit"></i>
+                </span>
+              </div>
             </el-popover>
           </template>
         </el-calendar>
@@ -52,12 +59,13 @@
         <div class="inputask" v-for="item,index in tasks" :key="index">
           <!-- 输入框 -->
           <div class="inputgroup">
-            <input required="" class="input" type="text" v-model="item.description"
-              @blur="saveTasks(item)">
+            <input required="" class="input" type="text" v-model="item.description" maxlength="20"
+              @blur="saveTasks(item)" @input="charlength = item.description.length">
             <span class="highlight"></span>
             <span class="bar"></span>
             <label>任务描述</label>
           </div>
+          <span class="charCheck">{{item.description.length || charlength}}/20</span>
           <el-checkbox class="checkbox" @change="saveTasks(item)" v-model="item.completed"
             size="medium">完成</el-checkbox>
         </div>
@@ -81,6 +89,8 @@ export default {
       type: "7",
       graphData: [],
       myChart: null,
+      uniqueDate: [],
+      charlength: 0,
     };
   },
   methods: {
@@ -115,31 +125,48 @@ export default {
         //更新
         const res = await window.api.updateTaks(item);
         console.log(res);
+        //调用一次查询全部,更新日历状态
+        this.getAllTasks();
       }
       if (!item.id && item.description !== "") {
         item.created_at = this.thisDate;
         const res = await window.api.addTasksDB(item);
+        console.log("添加结果", res);
+        item.id = res.id;
+        //调用一次查询全部,更新日历状态
+        this.getAllTasks();
       }
     },
     // 关闭弹窗
     async closeDialog() {
       this.tasks = [];
-      let res = await window.api.getTasksDB();
-      this.allTasks = res;
+      this.getAllTasks();
     },
     //图表日期范围更换
     async changeRadio() {
       let res = await window.api.getGraphData(this.type);
+      this.graphData = res;
       this.myChart.setOption({
         dataset: {
-          source: [...res],
+          source: [...this.graphData],
         },
       });
     },
+    //数组对象根据created_at去重
+    removeTheSame(arr) {
+      let uniqueMap = new Map(arr.map((item) => [item.created_at, item]));
+      return Array.from(uniqueMap.values());
+    },
+    //获取所有的任务
+    async getAllTasks() {
+      let res = await window.api.getTasksDB(); //请求
+      this.allTasks = res; //存储
+      this.uniqueDate = this.removeTheSame(this.allTasks); //去重
+    },
   },
   async mounted() {
-    let res = await window.api.getTasksDB();
-    this.allTasks = res;
+    //调用一个查询，初始化日历
+    this.getAllTasks();
     // 基于准备好的dom，初始化echarts实例
     this.myChart = echarts.init(document.getElementById("graph"));
     let option = {
@@ -178,7 +205,7 @@ export default {
     window.addEventListener("resize", () => {
       this.myChart.resize();
     });
-    this.changeRadio();
+    this.changeRadio(); //初始化图表
   },
 };
 </script>
@@ -186,6 +213,43 @@ export default {
 <style lang="less">
 .is-selected {
   color: #336699;
+}
+.poperBox {
+  max-height: 100px;
+  overflow-y: auto;
+  padding-right: 5px;
+  .poperBoxItem {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    .compeleteItem {
+      text-decoration: line-through;
+      color: #b6b6b6;
+      font-size: 13px;
+    }
+  }
+  /* 设置滚动条的宽度 */
+  &::-webkit-scrollbar {
+    width: 8px; /* 垂直滚动条 */
+    height: 8px; /* 水平滚动条 */
+  }
+
+  /* 设置滚动条的轨道（背景） */
+  &::-webkit-scrollbar-track {
+    background-color: #f1f1f1d2;
+    border-radius: 10px;
+  }
+
+  /* 设置滚动条的滑块（可拖动部分） */
+  &::-webkit-scrollbar-thumb {
+    background-color: #d4d4d4;
+    border-radius: 10px;
+  }
+
+  /* 设置鼠标悬停时滚动条的样式 */
+  &::-webkit-scrollbar-thumb:hover {
+    background-color: #bcbcbc;
+  }
 }
 .refresh {
   padding: 0 5px;
@@ -247,10 +311,17 @@ export default {
       font-size: 16px;
       width: 15%;
     }
+    .charCheck {
+      display: inline-block;
+      width: 10%;
+      font-size: 12px;
+      color: #d2d2d2;
+      text-align: center;
+    }
   }
   .inputgroup {
     position: relative;
-    width: 80%;
+    width: 75%;
     .input {
       font-size: 16px;
       padding: 10px 10px 10px 5px;

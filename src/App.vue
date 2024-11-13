@@ -45,4 +45,8 @@ export default {
 .el-radio-button:focus:not(.is-focus):not(:active):not(.is-disabled) {
   box-shadow: none !important;
 }
+.el-backtop,
+.el-calendar-table td.is-today {
+  color: #336699 !important;
+}
 </style>

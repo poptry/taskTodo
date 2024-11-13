@@ -4,14 +4,14 @@ import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 import installExtension, { VUEJS_DEVTOOLS } from "electron-devtools-installer";
 
 const path = require("path");
-const { initDatabase } = require("../dist_electron/electron/database"); // 导入数据库模块
+const { initDatabase } = require("./electron/database"); // 导入数据库模块
 const {
   addTasks,
   getTasks,
   updateTask,
   getTasksByDate,
   getGraphData,
-} = require("../dist_electron/electron/incident"); // 导入处理函数
+} = require("./electron/incident"); // 导入处理函数
 const isDevelopment = process.env.NODE_ENV !== "production";
 protocol.registerSchemesAsPrivileged([
   { scheme: "app", privileges: { secure: true, standard: true } },
@@ -27,7 +27,7 @@ async function createWindow() {
     webPreferences: {
       nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION,
       contextIsolation: true,
-      preload: path.join(__dirname, "preload.js"), // 指定 preload 脚本
+      preload: path.join(__dirname, "../src/electron/preload.js"), // 指定 preload 脚本
     },
   });
 
